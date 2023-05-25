@@ -53,45 +53,45 @@ def main():
                 image_caption = Image.open(my_upload).resize((256, 256))
                 st.sidebar.image(image_caption)
                 imgURL = ''
+                global img
                 img = cv2.cvtColor(np.array(image_caption), cv2.COLOR_RGB2BGR)
             elif imgURL is not None:
                 path = "input.jpg" 
-                try: 
-                    urllib.request.urlretrieve(imgURL, path)
-                    st.write('The current image is', path)
-                    image_caption = Image.open(path).resize((256, 256))
-                    st.sidebar.image(image_caption)
-                    img = cv2.imread(path) 
-                except:
-                    st.write('Cannot download')
-         ##### New Caption ###np.array(img)
+  
+                urllib.request.urlretrieve(imgURL, path)
+                st.write('The current image is', path)
+                image_caption = Image.open(path).resize((256, 256))
+                st.sidebar.image(image_caption)
+                img = cv2.imread(path) 
 
+         ##### New Caption ###np.array(img)
+            check = np.array(image_caption)
+            if check.shape[2] > 3:
+                image_caption = check[...,:3]
+            st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
+            distances, indices = compute_distances_fromPath(items, img, model, knn)
+                # for idx in indices[0]:
+                    # print(f'Product ID: {items.iloc[idx].article_id} \n {items.iloc[idx].prod_name} \n {items.iloc[idx].product_type_name},{items.iloc[idx].product_group_name}')
+                # print(distances)
+            with st.container():     
+                    # for idx, score_set in zip(indices[0], distances):
+                    container = st.expander('Similar items based on image embeddings', expanded =True)
+                    with container:
+                        cols = st.columns(6)
+                        cols[0].write('###### Similarity Score')
+                        # cols[0].caption(model_desc[0])
+                        for idx, col, score in zip(indices[0][1:], cols[1:], distances[0][1:]):
+                            with col:
+                                st.caption('{:.2f}'.format(score/10))
+                                image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
+                                image = Image.open(io.BytesIO(requests.get(image).content))
+                                image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                                st.image(image, use_column_width=True)
+                                # if model == 'Similar items based on text embeddings':
+                                st.caption(items.iloc[idx].prod_name)
         except:
             pass
-        check = np.array(image_caption)
-        if check.shape[2] > 3:
-            image_caption = check[...,:3]
-        st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
-        distances, indices = compute_distances_fromPath(items, img, model, knn)
-        # for idx in indices[0]:
-            # print(f'Product ID: {items.iloc[idx].article_id} \n {items.iloc[idx].prod_name} \n {items.iloc[idx].product_type_name},{items.iloc[idx].product_group_name}')
-        # print(distances)
-        with st.container():     
-                # for idx, score_set in zip(indices[0], distances):
-                container = st.expander('Similar items based on image embeddings', expanded =True)
-                with container:
-                    cols = st.columns(6)
-                    cols[0].write('###### Similarity Score')
-                    # cols[0].caption(model_desc[0])
-                    for idx, col, score in zip(indices[0][1:], cols[1:], distances[0][1:]):
-                        with col:
-                            st.caption('{:.2f}'.format(score/10))
-                            image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
-                            image = Image.open(io.BytesIO(requests.get(image).content))
-                            image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                            st.image(image, use_column_width=True)
-                            # if model == 'Similar items based on text embeddings':
-                            st.caption(items.iloc[idx].prod_name)
+ 
 if __name__ == '__main__':
     main()
 
