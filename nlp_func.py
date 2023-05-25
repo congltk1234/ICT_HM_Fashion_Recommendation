@@ -5,7 +5,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.applications import efficientnet
-
+from tensorflow.keras.layers import TextVectorization
+import json
 
 seed = 111
 tf.random.set_seed(seed)
@@ -357,3 +358,14 @@ class LRSchedule(keras.optimizers.schedules.LearningRateSchedule):
             lambda: warmup_learning_rate,
             lambda: self.post_warmup_learning_rate,
         )
+
+
+
+vectorization = TextVectorization(
+    max_tokens=VOCAB_SIZE,
+    output_mode="int",
+    output_sequence_length=SEQ_LENGTH,
+    standardize=custom_standardization,
+)
+
+

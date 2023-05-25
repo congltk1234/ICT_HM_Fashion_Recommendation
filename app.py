@@ -16,6 +16,7 @@ import io
 import requests
 import json
 
+
 st.set_page_config(layout="wide", initial_sidebar_state='expanded')
 
 @st.cache_data
