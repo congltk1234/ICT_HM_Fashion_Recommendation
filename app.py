@@ -66,14 +66,12 @@ def load_captioning_model():
     vocab = vectorization.get_vocabulary()
     index_lookup = dict(zip(range(len(vocab)), vocab))
     max_decoded_sentence_length = SEQ_LENGTH - 1
-    valid_images = list(valid_data.keys())
     #new model
     new_model = ImageCaptioningModel(
         cnn_model=cnn_model, encoder=encoder, decoder=decoder,
     )
     new_model.built=True
     new_model.load_weights('embedding_feature/model_caption_weights.h5')
-
     return new_model, max_decoded_sentence_length, vectorization, index_lookup
 
 new_model, max_decoded_sentence_length, vectorization, index_lookup = load_captioning_model()
