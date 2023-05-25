@@ -65,14 +65,13 @@ def main():
                 except:
                     st.write('Cannot download')
          ##### New Caption ###np.array(img)
-            if np.array(image_caption).shape[2]>3:
-                image_caption = np.array(image_caption)
-                image_caption = image_caption[...,:3]
-            st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
+
         except:
             pass
-        
-        
+        if np.array(image_caption).shape[2]>3:
+            image_caption = np.array(image_caption)
+            image_caption = image_caption[...,:3]
+        st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
         distances, indices = compute_distances_fromPath(items, img, model, knn)
         # for idx in indices[0]:
             # print(f'Product ID: {items.iloc[idx].article_id} \n {items.iloc[idx].prod_name} \n {items.iloc[idx].product_type_name},{items.iloc[idx].product_group_name}')
