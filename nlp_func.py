@@ -5,8 +5,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.applications import efficientnet
-from tensorflow.keras.layers import TextVectorization
-import json
+
 
 seed = 111
 tf.random.set_seed(seed)
@@ -47,14 +46,7 @@ def custom_standardization(input_string):
     return tf.strings.regex_replace(lowercase, "[%s]" % re.escape(strip_chars), "")
 
 
-# Data augmentation for image data
-image_augmentation = keras.Sequential(
-    [
-        layers.RandomFlip("horizontal"),
-        layers.RandomRotation(0.2),
-        layers.RandomContrast(0.3),
-    ]
-)
+
 
 
 def decode_and_resize(img_path):
@@ -74,29 +66,6 @@ def make_dataset(images, captions):
     dataset = dataset.batch(BATCH_SIZE).prefetch(AUTOTUNE)
 
     return dataset
-
-
-
-# Opening JSON file
-with open('data/sample.json') as json_file:
-    data = json.load(json_file)
-
-# # Split the dataset into training and validation sets
-train_data, valid_data = train_val_split(data, 0.5)
-
-vectorization = TextVectorization(
-    max_tokens=VOCAB_SIZE,
-    output_mode="int",
-    output_sequence_length=SEQ_LENGTH,
-    standardize=custom_standardization,
-)
-
-items = pd.read_csv('data/items.csv')
-text_data = items.detail_desc.values
-vectorization.adapt(np.asarray(text_data).astype(str))
-# Pass the list of images and the list of corresponding captions
-train_dataset = make_dataset(list(train_data.keys()), list(train_data.values()))
-valid_dataset = make_dataset(list(valid_data.keys()), list(valid_data.values()))
 
 
 #@title build model
@@ -360,17 +329,16 @@ class ImageCaptioningModel(keras.Model):
         # called automatically.
         return [self.loss_tracker, self.acc_tracker]
 
-cnn_model = get_cnn_model()
-encoder = TransformerEncoderBlock(embed_dim=EMBED_DIM, dense_dim=FF_DIM, num_heads=1)
-decoder = TransformerDecoderBlock(embed_dim=EMBED_DIM, ff_dim=FF_DIM, num_heads=2)
-caption_model = ImageCaptioningModel( cnn_model=cnn_model, encoder=encoder, decoder=decoder, image_aug=image_augmentation)
 
 
-# Define the loss function
-cross_entropy = keras.losses.SparseCategoricalCrossentropy(
-    from_logits=False, reduction="none"
-)
-
+# # Data augmentation for image data
+# image_augmentation = keras.Sequential(
+#     [
+#         layers.RandomFlip("horizontal"),
+#         layers.RandomRotation(0.2),
+#         layers.RandomContrast(0.3),
+#     ]
+# )
 
 # Learning Rate Scheduler for the optimizer
 class LRSchedule(keras.optimizers.schedules.LearningRateSchedule):
@@ -389,55 +357,3 @@ class LRSchedule(keras.optimizers.schedules.LearningRateSchedule):
             lambda: warmup_learning_rate,
             lambda: self.post_warmup_learning_rate,
         )
-
-# Create a learning rate schedule
-num_train_steps = len(train_dataset) * EPOCHS
-num_warmup_steps = num_train_steps // 15
-lr_schedule = LRSchedule(post_warmup_learning_rate=1e-4, warmup_steps=num_warmup_steps)
-# Compile the model
-caption_model.compile(optimizer=keras.optimizers.Adam(lr_schedule), loss=cross_entropy)
-# Fit the model
-history = caption_model.fit(
-    train_dataset,
-    epochs=EPOCHS,
-    validation_data=valid_dataset,
-)
-
-#@title Check sample predictions
-vocab = vectorization.get_vocabulary()
-index_lookup = dict(zip(range(len(vocab)), vocab))
-max_decoded_sentence_length = SEQ_LENGTH - 1
-valid_images = list(valid_data.keys())
-
-
-new_model = ImageCaptioningModel(
-    cnn_model=cnn_model, encoder=encoder, decoder=decoder, image_aug=image_augmentation,
-)
-new_model.built=True
-new_model.load_weights('embedding_feature/model_caption_weights.h5')
-
-def generate_caption(img, model):
-    # Select a random image from the validation dataset
-    # sample_img = decode_and_resize(sample_img)
-    # img = img.clip(0, 255).astype(np.uint8)
-    # Pass the image to the CNN
-    img = tf.expand_dims(img, 0)
-    img = model.cnn_model(img)
-    # Pass the image features to the Transformer encoder
-    encoded_img = model.encoder(img, training=False)
-    # Generate the caption using the Transformer decoder
-    decoded_caption = "<start> "
-    for i in range(max_decoded_sentence_length):
-        tokenized_caption = vectorization([decoded_caption])[:, :-1]
-        mask = tf.math.not_equal(tokenized_caption, 0)
-        predictions = model.decoder(
-            tokenized_caption, encoded_img, training=False, mask=mask
-        )
-        sampled_token_index = np.argmax(predictions[0, i, :])
-        sampled_token = index_lookup[sampled_token_index]
-        if sampled_token == " <end>":
-            break
-        decoded_caption += " " + sampled_token
-    decoded_caption = decoded_caption.replace("<start> ", "")
-    decoded_caption = decoded_caption.replace(" <end>", "").strip()
-    return decoded_caption
