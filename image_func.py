@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 import pandas as pd
-import streamlit as st
 
 def compute_distances(df, idx, model, knn):
     """

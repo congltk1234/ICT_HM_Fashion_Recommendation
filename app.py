@@ -107,8 +107,7 @@ def main():
 
 
     page_options = ["Find similar items",
-                    "Customer Recommendations",
-                    "Product Captioning"]
+                    "Customer Recommendations"]
     
 
 
@@ -139,7 +138,6 @@ def main():
         try: 
             if my_upload is not None:
                 image_caption = Image.open(my_upload).resize((256, 256))
-                st.sidebar.image(image_caption)
                 imgURL = ''
                 global img
                 img = cv2.cvtColor(np.array(image_caption), cv2.COLOR_RGB2BGR)
@@ -149,7 +147,6 @@ def main():
                 urllib.request.urlretrieve(imgURL, path)
                 st.write('The current image is', path)
                 image_caption = Image.open(path).resize((256, 256))
-                st.sidebar.image(image_caption)
                 img = cv2.imread(path) 
 
          ##### New Caption ###np.array(img)
@@ -157,6 +154,8 @@ def main():
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
             st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
+            st.sidebar.image(image_caption)
+            
             distances, indices = compute_distances_fromPath(items, img, model, knn)
                 # for idx in indices[0]:
                     # print(f'Product ID: {items.iloc[idx].article_id} \n {items.iloc[idx].prod_name} \n {items.iloc[idx].product_type_name},{items.iloc[idx].product_group_name}')
@@ -177,6 +176,7 @@ def main():
                                 st.image(image, use_column_width=True)
                                 # if model == 'Similar items based on text embeddings':
                                 st.caption(items.iloc[idx].prod_name)
+                                st.caption(items.iloc[idx].detail_desc)
         except:
             pass
  
