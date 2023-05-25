@@ -68,9 +68,9 @@ def main():
 
         except:
             pass
-        if np.array(image_caption).shape[2]>3:
-            image_caption = np.array(image_caption)
-            image_caption = image_caption[...,:3]
+        check = np.array(image_caption)
+        if check.shape[2] > 3:
+            image_caption = check[...,:3]
         st.sidebar.subheader(f':blue[Generate Description:]\n {generate_caption(image_caption,new_model)}')
         distances, indices = compute_distances_fromPath(items, img, model, knn)
         # for idx in indices[0]:
