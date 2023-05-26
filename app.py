@@ -29,6 +29,7 @@ items = load_csv('data/items.csv')
 @st.cache_resource
 def load_captioning_model(): 
     # Opening JSON file
+    SEQ_LENGTH = 10
     with open('data/sample.json') as json_file:
         data = json.load(json_file)
     # # Split the dataset into training and validation sets
@@ -171,8 +172,8 @@ def main():
                             with col:
                                 st.caption('{:.2f}'.format(score/10))
                                 image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
+                                st.caption(image)
                                 image = Image.open(io.BytesIO(requests.get(image).content))
-                                image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                                 st.image(image, use_column_width=True)
                                 # if model == 'Similar items based on text embeddings':
                                 st.caption(items.iloc[idx].prod_name)
