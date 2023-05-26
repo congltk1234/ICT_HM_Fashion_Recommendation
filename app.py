@@ -1,10 +1,20 @@
 import streamlit as st
+st.set_page_config(layout="wide", initial_sidebar_state='expanded')
 import pandas as pd
 import numpy as np
 from PIL import Image
 import urllib.request
 import cv2
 import tensorflow as tf
+# download the stopwords from NLTK
+import nltk
+@st.cache_resource
+def load_nltk():
+    nltk.download()
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+load_nltk()
+
 from image_func import *
 from nlp_func import *
 from process import *
@@ -17,17 +27,9 @@ import requests
 import json
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import nltk
-
-st.set_page_config(layout="wide", initial_sidebar_state='expanded')
 
 
-# download the stopwords from NLTK
-@st.cache_resource
-def load_nltk():
-    nltk.download('stopwords')
-    nltk.download('wordnet')
-load_nltk()
+
 
 @st.cache_data
 def load_csv(path):
