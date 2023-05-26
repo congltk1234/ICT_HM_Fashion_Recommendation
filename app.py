@@ -10,7 +10,6 @@ import tensorflow as tf
 import nltk
 @st.cache_resource
 def load_nltk():
-    nltk.download()
     nltk.download('stopwords')
     nltk.download('wordnet')
 load_nltk()
