@@ -14,9 +14,9 @@ def load_nltk():
     nltk.download('wordnet')
 load_nltk()
 
-from image_func import *
-from nlp_func import *
-from process import *
+from utils.image_func import *
+from utils.nlp_func import *
+from utils.process import *
 import streamlit.components.v1 as components
 from sklearn.neighbors import NearestNeighbors
 from tensorflow.keras.applications import EfficientNetB0
@@ -31,11 +31,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 @st.cache_data
-def load_csv(path):
-    df = pd.read_csv(path)
+def load_csv():
+    df = pd.read_csv('data/items.csv')
     return df
 
-items = load_csv('data/items.csv')
+items = load_csv()
 
 @st.cache_data
 def load_embedding():
@@ -218,7 +218,67 @@ def main():
                                 st.caption(f':memo: :red[Description:] \n {items.iloc[idx].detail_desc}')
         except:
             pass
- 
+#########################################################################################
+#########################################################################################
+    if page_selection == "Customer Recommendations":
+        customers_rcmnds = pd.read_csv('data/customers_rcmnds.csv')
+        customers = customers_rcmnds.customer_id.unique()   
+        get_item = st.sidebar.button('Get Random Customer')
+        if get_item:
+            rand_customer = np.random.choice(customers)
+            st.sidebar.markdown(f':memo: :red[**Customer ID:**]')
+            st.sidebar.code(rand_customer)
+            st.sidebar.write('#### Customer history')
+
+            customer_data = customers_rcmnds[customers_rcmnds.customer_id == rand_customer]
+            global customer_history
+            customer_history = np.array(eval(customer_data.article_id.iloc[0]))
+            # customer_history = ['0'+str(i) for i in customer_history]
+
+            splits = [customer_history[i:i+3] for i in range(0, len(customer_history), 3)]
+            for split in splits:
+                with st.sidebar.container():
+                    cols = st.columns(3)
+                    for item, col in zip(split, cols):
+                        image = items[items['article_id']==item]['image'].values[0]
+                        image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
+                        image = Image.open(io.BytesIO(requests.get(image).content))
+                        image = image.resize((100, 150))
+                        with col:
+                            st.image(image, use_column_width=True)
+                            name = items[items['article_id']==item]['prod_name'].values[0]
+                            st.markdown(f'**{name}**')
+
+            apriori = np.array(eval(customer_data.apriori.iloc[0])).astype(int)
+            uucf = np.array(eval(customer_data.uucf.iloc[0])).astype(int)
+
+            with st.container():     
+                    # for idx, score_set in zip(indices[0], distances):
+                    container = st.expander(':red[**Association Rules: Apriori Algorithm**]', expanded =True)
+                    with container:
+                        cols = st.columns(6)
+                        # cols[0].write('###### Similarity Score')
+                        for item, col in zip(apriori[:6], cols):
+                            with col:
+                                image = items[items['article_id']==item]['image'].values[0]
+                                image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
+                                image = Image.open(io.BytesIO(requests.get(image).content))
+                                st.image(image, use_column_width=True)
+                                name = items[items['article_id']==item]['prod_name'].values[0]
+                                st.markdown(f'**{name}**')
+            with st.container():     
+                    # for idx, score_set in zip(indices[0], distances):
+                    container = st.expander(':red[**Collaborative Filtering: User-user**]', expanded =True)
+                    with container:
+                        cols = st.columns(6)
+                        for item, col in zip(uucf[:6], cols):
+                            with col:
+                                image = items[items['article_id']==item]['image'].values[0]
+                                image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
+                                image = Image.open(io.BytesIO(requests.get(image).content))
+                                st.image(image, use_column_width=True)
+                                name = items[items['article_id']==item]['prod_name'].values[0]
+                                st.markdown(f'**{name}**')
 if __name__ == '__main__':
     main()
 
