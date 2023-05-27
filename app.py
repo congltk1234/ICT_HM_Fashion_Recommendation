@@ -17,15 +17,12 @@ load_nltk()
 from utils.image_func import *
 from utils.nlp_func import *
 from utils.process import *
-import streamlit.components.v1 as components
-from sklearn.neighbors import NearestNeighbors
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras.layers import TextVectorization
 import io
 import requests
 import json
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 
@@ -109,9 +106,6 @@ def load_captioning_model():
 new_model, max_decoded_sentence_length, vectorization, index_lookup = load_captioning_model()
 
 def generate_caption(img, model):
-    # Select a random image from the validation dataset
-    # sample_img = decode_and_resize(sample_img)
-    # img = img.clip(0, 255).astype(np.uint8)
     # Pass the image to the CNN
     img = tf.expand_dims(img, 0)
     img = model.cnn_model(img)
@@ -135,29 +129,23 @@ def generate_caption(img, model):
     return decoded_caption
 
 
-def get_best_similiarity(sentence_embedding,new_caption, best_n = 3) :
-    embedding_cosine = cosine_similarity(new_caption , sentence_embedding).squeeze()
-    return embedding_cosine.argsort()[-best_n:][::-1]; 
+def url(item_id):
+    url = 'https://www2.hm.com/en_us/productpage.0'+ str(item_id) +'.html'
+    return url
 
 def main():
-    page_options = ["Find similar items",
-                    "Customer Recommendations"]
+    page_options = ["🔎 Find similar items",
+                    "👥 Customer Recommendations"]
     
     page_selection = st.sidebar.radio("Try", page_options)
-
-    models = ['Similar items based on image embeddings', 
-              'Similar items based on text embeddings']
     
-    model_descs = ['Image embeddings are calculated using EfficientNetB0 from Keras, It maps image into a 1280 dimensional dense vector space', 
-                  'Text description embeddings are calculated using BERT-based Sentence-transformers model: It maps sentences & paragraphs to a 768 dimensional dense vector space']
+    model_descs = ['Image embeddings are calculated using :red[**EfficientNetB0 from Keras**], It maps image into a 1280 dimensional dense vector space', 
+                  'Text description embeddings are calculated using :red[**BERT-based Sentence-transformers model**]: It maps sentences & paragraphs to a 768 dimensional dense vector space']
 
 #########################################################################################
 ################ Sector 1: Find Similar Items #########################################################################
-    if page_selection == "Find similar items":
-
+    if page_selection == page_options[0]:
         best_n = 6
-        knn = NearestNeighbors(n_neighbors=best_n)
-        knn.fit(image_embeddings)
         imgURL = st.sidebar.text_input('Image path', '')
         my_upload = st.sidebar.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
         try: 
@@ -171,56 +159,59 @@ def main():
                 urllib.request.urlretrieve(imgURL, path)
                 image_caption = Image.open(path).resize((256, 256))
                 img = cv2.imread(path) 
-
-         ##### New Caption ###np.array(img)
+         ##### New Caption ###
             check = np.array(image_caption)
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
             caption = generate_caption(image_caption,new_model)
-            st.sidebar.markdown(f':memo: :red[**Generate Description:**]')
-            st.sidebar.write(caption)
+            # st.sidebar.markdown(f':memo: :red[**Generate Description:**]')
+            # st.sidebar.write(caption)
+            caption = st.sidebar.text_input(':memo: :red[**Generate Description:**]', caption)
             st.sidebar.image(image_caption)
             
             caption = sbert_model.encode(caption)
             caption = np.expand_dims(caption, axis=0)
-            describe_recommend = get_best_similiarity(sentence_embeddings , caption , best_n)  
-            # describe_recommend = array([85633,196, 278, 73564, 84305])
-            # st.write(describe_recommend)
-            distances, img_recommend = compute_distances_fromPath(items, img, image_model, knn)
-            # indices =array([[10000,  9226, 95362,  7751, 47676]])
+            text_similarity, describe_recommend = get_best_similiarity(sentence_embeddings , caption , best_n)  
+            distances, img_recommend = compute_distances_fromPath(items, img, image_model, image_embeddings)
 
             with st.container():     
-                    # for idx, score_set in zip(indices[0], distances):
-                    container = st.expander(':red[**Similar items based on Image embeddings**]', expanded =True)
+                    container = st.expander(':tshirt: :red[**Similar items based on Image embeddings**]', expanded =True)
                     with container:
                         cols = st.columns(6)
                         cols[0].write('###### Similarity Score')
-                        for idx, col, score in zip(img_recommend[0][1:], cols[1:], distances[0][1:]):
+                        cols[0].caption(model_descs[0])
+                        for idx, col, score in zip(img_recommend[:5], cols[1:], distances[:5]):
                             with col:
-                                st.caption('{:.2f}'.format(score/10))
+                                st.caption('{:.2f}'.format(score))
                                 image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
                                 image = Image.open(io.BytesIO(requests.get(image).content))
                                 st.image(image, use_column_width=True)
-                                st.markdown(f'**{items.iloc[idx].prod_name}**')
+                                item_url = url(items.iloc[idx].article_id)
+                                st.write(f"**[{items.iloc[idx].prod_name}]({item_url})**")
+                                price =items.iloc[idx].price*1000 
+                                st.code(f'''{items.iloc[idx].product_type_name}\n💲{price:.3g}''')
             with st.container():     
-                    # for idx, score_set in zip(indices[0], distances):
-                    container = st.expander(':red[**Similar items based on Text embeddings**]', expanded =True)
+                    container = st.expander(':left_speech_bubble: :red[**Similar items based on Text embeddings**]', expanded =True)
                     with container:
                         cols = st.columns(6)
                         cols[0].write('###### Similarity Score')
-                        for idx, col, score in zip(describe_recommend[1:], cols[1:], distances[0][1:]):
+                        cols[0].caption(model_descs[1])
+                        for idx, col, score in zip(describe_recommend[:5], cols[1:], text_similarity[:5]):
                             with col:
-                                st.caption('{:.2f}'.format(score/10))
+                                st.caption('{:.2f}'.format(score))
                                 image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
                                 image = Image.open(io.BytesIO(requests.get(image).content))
                                 st.image(image, use_column_width=True)
-                                st.markdown(f'**{items.iloc[idx].prod_name}**')
+                                item_url = url(items.iloc[idx].article_id)
+                                st.write(f"**[{items.iloc[idx].prod_name}]({item_url})**")
+                                price =items.iloc[idx].price*1000 
+                                st.code(f'''{items.iloc[idx].product_type_name}\n💲{price:.3g}''')
                                 st.caption(f':memo: :red[Description:] \n {items.iloc[idx].detail_desc}')
         except:
             pass
 #########################################################################################
 #########################################################################################
-    if page_selection == "Customer Recommendations":
+    if page_selection == page_options[1]:
         customers_rcmnds = pd.read_csv('data/customers_rcmnds.csv')
         customers = customers_rcmnds.customer_id.unique()   
         get_item = st.sidebar.button('Get Random Customer')
@@ -228,12 +219,16 @@ def main():
             rand_customer = np.random.choice(customers)
             st.sidebar.markdown(f':memo: :red[**Customer ID:**]')
             st.sidebar.code(rand_customer)
-            st.sidebar.write('#### Customer history')
+            st.sidebar.write('#### :shopping_trolley: Customer history')
 
             customer_data = customers_rcmnds[customers_rcmnds.customer_id == rand_customer]
             global customer_history
             customer_history = np.array(eval(customer_data.article_id.iloc[0]))
-            # customer_history = ['0'+str(i) for i in customer_history]
+            apriori = np.array(eval(customer_data.apriori.iloc[0])).astype(int)
+            uucf = np.array(eval(customer_data.uucf.iloc[0])).astype(int)
+
+            uucf = np.setdiff1d(uucf, customer_history)
+            uucf = np.concatenate((uucf, customer_history), axis=0)
 
             splits = [customer_history[i:i+3] for i in range(0, len(customer_history), 3)]
             for split in splits:
@@ -247,17 +242,17 @@ def main():
                         with col:
                             st.image(image, use_column_width=True)
                             name = items[items['article_id']==item]['prod_name'].values[0]
-                            st.markdown(f'**{name}**')
+                            item_url = url(item)
+                            st.write(f"**[{name}]({item_url})**")
+                            group = items[items['article_id']==item]['product_type_name'].values[0]
+                            price = items[items['article_id']==item]['price'].values[0]*1000
+                            st.code(f'''{group}\n💲{price:.3g}''')
 
-            apriori = np.array(eval(customer_data.apriori.iloc[0])).astype(int)
-            uucf = np.array(eval(customer_data.uucf.iloc[0])).astype(int)
 
             with st.container():     
-                    # for idx, score_set in zip(indices[0], distances):
                     container = st.expander(':red[**Association Rules: Apriori Algorithm**]', expanded =True)
                     with container:
                         cols = st.columns(6)
-                        # cols[0].write('###### Similarity Score')
                         for item, col in zip(apriori[:6], cols):
                             with col:
                                 image = items[items['article_id']==item]['image'].values[0]
@@ -265,9 +260,12 @@ def main():
                                 image = Image.open(io.BytesIO(requests.get(image).content))
                                 st.image(image, use_column_width=True)
                                 name = items[items['article_id']==item]['prod_name'].values[0]
-                                st.markdown(f'**{name}**')
+                                item_url = url(item)
+                                st.write(f"**[{name}]({item_url})**")
+                                group = items[items['article_id']==item]['product_type_name'].values[0]
+                                price = items[items['article_id']==item]['price'].values[0]*1000
+                                st.code(f'''{group}\n💲{price:.3g}''')
             with st.container():     
-                    # for idx, score_set in zip(indices[0], distances):
                     container = st.expander(':red[**Collaborative Filtering: User-user**]', expanded =True)
                     with container:
                         cols = st.columns(6)
@@ -278,7 +276,11 @@ def main():
                                 image = Image.open(io.BytesIO(requests.get(image).content))
                                 st.image(image, use_column_width=True)
                                 name = items[items['article_id']==item]['prod_name'].values[0]
-                                st.markdown(f'**{name}**')
+                                item_url = url(item)
+                                st.write(f"**[{name}]({item_url})**")
+                                group = items[items['article_id']==item]['product_type_name'].values[0]
+                                price = items[items['article_id']==item]['price'].values[0]*1000
+                                st.code(f'''{group}\n💲{price:.3g}''')
 if __name__ == '__main__':
     main()
 
