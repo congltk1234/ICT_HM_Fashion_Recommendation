@@ -1,3 +1,10 @@
+"""
+Title: Image Captioning
+Author: [A_K_Nain](https://twitter.com/A_K_Nain)
+Description: Implement an image captioning model using a CNN and a Transformer.
+Reference: https://keras.io/examples/vision/image_captioning/
+"""
+
 import re
 import numpy as np
 import pandas as pd
@@ -46,10 +53,6 @@ def custom_standardization(input_string):
     lowercase = tf.strings.lower(input_string)
     return tf.strings.regex_replace(lowercase, "[%s]" % re.escape(strip_chars), "")
 
-
-
-
-
 def decode_and_resize(img_path):
     img = tf.io.read_file(img_path)
     img = tf.image.decode_jpeg(img, channels=3)
@@ -65,15 +68,13 @@ def make_dataset(images, captions):
     dataset = dataset.shuffle(len(images))
     dataset = dataset.map(process_input, num_parallel_calls=AUTOTUNE)
     dataset = dataset.batch(BATCH_SIZE).prefetch(AUTOTUNE)
-
     return dataset
 
 
 #@title build model
 def get_cnn_model():
     base_model = efficientnet.EfficientNetB0(
-        input_shape=(*IMAGE_SIZE, 3), include_top=False, weights="imagenet",
-    )
+        input_shape=(*IMAGE_SIZE, 3), include_top=False, weights="imagenet")
     # We freeze our feature extractor
     base_model.trainable = False
     base_model_out = base_model.output
@@ -262,36 +263,27 @@ class ImageCaptioningModel(keras.Model):
 
         # 1. Get image embeddings
         img_embed = self.cnn_model(batch_img)
-
         # 2. Pass each of the five captions one by one to the decoder
         # along with the encoder outputs and compute the loss as well as accuracy
         # for each caption.
         for i in range(self.num_captions_per_image):
             with tf.GradientTape() as tape:
                 loss, acc = self._compute_caption_loss_and_acc(
-                    img_embed, batch_seq[:, i, :], training=True
-                )
-
+                    img_embed, batch_seq[:, i, :], training=True)
                 # 3. Update loss and accuracy
                 batch_loss += loss
                 batch_acc += acc
-
             # 4. Get the list of all the trainable weights
             train_vars = (
-                self.encoder.trainable_variables + self.decoder.trainable_variables
-            )
-
+                self.encoder.trainable_variables + self.decoder.trainable_variables)
             # 5. Get the gradients
             grads = tape.gradient(loss, train_vars)
-
             # 6. Update the trainable weights
             self.optimizer.apply_gradients(zip(grads, train_vars))
-
         # 7. Update the trackers
         batch_acc /= float(self.num_captions_per_image)
         self.loss_tracker.update_state(batch_loss)
         self.acc_tracker.update_state(batch_acc)
-
         # 8. Return the loss and accuracy values
         return {"loss": self.loss_tracker.result(), "acc": self.acc_tracker.result()}
 
@@ -299,10 +291,8 @@ class ImageCaptioningModel(keras.Model):
         batch_img, batch_seq = batch_data
         batch_loss = 0
         batch_acc = 0
-
         # 1. Get image embeddings
         img_embed = self.cnn_model(batch_img)
-
         # 2. Pass each of the five captions one by one to the decoder
         # along with the encoder outputs and compute the loss as well as accuracy
         # for each caption.
@@ -310,17 +300,14 @@ class ImageCaptioningModel(keras.Model):
             loss, acc = self._compute_caption_loss_and_acc(
                 img_embed, batch_seq[:, i, :], training=False
             )
-
             # 3. Update batch loss and batch accuracy
             batch_loss += loss
             batch_acc += acc
 
         batch_acc /= float(self.num_captions_per_image)
-
         # 4. Update the trackers
         self.loss_tracker.update_state(batch_loss)
         self.acc_tracker.update_state(batch_acc)
-
         # 5. Return the loss and accuracy values
         return {"loss": self.loss_tracker.result(), "acc": self.acc_tracker.result()}
 
@@ -330,16 +317,6 @@ class ImageCaptioningModel(keras.Model):
         # called automatically.
         return [self.loss_tracker, self.acc_tracker]
 
-
-
-# # Data augmentation for image data
-# image_augmentation = keras.Sequential(
-#     [
-#         layers.RandomFlip("horizontal"),
-#         layers.RandomRotation(0.2),
-#         layers.RandomContrast(0.3),
-#     ]
-# )
 
 # Learning Rate Scheduler for the optimizer
 class LRSchedule(keras.optimizers.schedules.LearningRateSchedule):
@@ -366,7 +343,6 @@ with open('data/sample.json') as json_file:
 
 # # Split the dataset into training and validation sets
 train_data, valid_data = train_val_split(data, 0.5)
-
 vectorization = TextVectorization(
     max_tokens=VOCAB_SIZE,
     output_mode="int",
@@ -381,8 +357,6 @@ vectorization.adapt(np.asarray(text_data).astype(str))
 train_dataset = make_dataset(list(train_data.keys()), list(train_data.values()))
 valid_dataset = make_dataset(list(valid_data.keys()), list(valid_data.values()))
 
-
-
 cnn_model = get_cnn_model()
 encoder = TransformerEncoderBlock(embed_dim=EMBED_DIM, dense_dim=FF_DIM, num_heads=1)
 decoder = TransformerDecoderBlock(embed_dim=EMBED_DIM, ff_dim=FF_DIM, num_heads=2)
@@ -396,16 +370,3 @@ lr_schedule = LRSchedule(post_warmup_learning_rate=1e-4, warmup_steps=num_warmup
 caption_model.compile(optimizer=keras.optimizers.Adam(lr_schedule), loss=keras.losses.SparseCategoricalCrossentropy(
     from_logits=False, reduction="none"
 ))
-# # Fit the model
-# history = caption_model.fit(
-#     train_dataset,
-#     epochs=EPOCHS,
-#     validation_data=valid_dataset,
-# )
-
-# #@title Check sample predictions
-# vocab = vectorization.get_vocabulary()
-# index_lookup = dict(zip(range(len(vocab)), vocab))
-# max_decoded_sentence_length = SEQ_LENGTH - 1
-# valid_images = list(valid_data.keys())
-
