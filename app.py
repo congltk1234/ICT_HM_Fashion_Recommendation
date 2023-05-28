@@ -53,7 +53,7 @@ def main():
 ################ Sector 1: Find Similar Items #########################################################################
     if page_selection == page_options[0]:
         best_n = 6
-        imgURL = st.sidebar.text_input('Image path', 'https://media.githubusercontent.com/media/congltk1234/ICT_HM_Fashion_Recommendation/blob/streamlit_deploy/input.jpg')
+        imgURL = st.sidebar.text_input('Image path', 'https://media.githubusercontent.com/media/congltk1234/ICT_HM_Fashion_Recommendation/streamlit_deploy/input.jpg')
         my_upload = st.sidebar.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
         try: 
             if my_upload is not None:
