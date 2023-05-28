@@ -172,7 +172,7 @@ def main():
             caption = sbert_model.encode(caption)
             caption = np.expand_dims(caption, axis=0)
             text_similarity, describe_recommend = get_best_similiarity(sentence_embeddings , caption , best_n)  
-            distances, img_recommend = compute_distances_fromPath(items, img, image_model, image_embeddings)
+            distances, img_recommend = compute_distances_fromPath(img, image_model, image_embeddings)
 
             with st.container():     
                     container = st.expander(':tshirt: :red[**Similar items based on Image embeddings**]', expanded =True)

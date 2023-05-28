@@ -47,9 +47,6 @@ def custom_standardization(input_string):
     return tf.strings.regex_replace(lowercase, "[%s]" % re.escape(strip_chars), "")
 
 
-
-
-
 def decode_and_resize(img_path):
     img = tf.io.read_file(img_path)
     img = tf.image.decode_jpeg(img, channels=3)
@@ -330,17 +327,6 @@ class ImageCaptioningModel(keras.Model):
         # called automatically.
         return [self.loss_tracker, self.acc_tracker]
 
-
-
-# # Data augmentation for image data
-# image_augmentation = keras.Sequential(
-#     [
-#         layers.RandomFlip("horizontal"),
-#         layers.RandomRotation(0.2),
-#         layers.RandomContrast(0.3),
-#     ]
-# )
-
 # Learning Rate Scheduler for the optimizer
 class LRSchedule(keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, post_warmup_learning_rate, warmup_steps):
@@ -396,16 +382,4 @@ lr_schedule = LRSchedule(post_warmup_learning_rate=1e-4, warmup_steps=num_warmup
 caption_model.compile(optimizer=keras.optimizers.Adam(lr_schedule), loss=keras.losses.SparseCategoricalCrossentropy(
     from_logits=False, reduction="none"
 ))
-# # Fit the model
-# history = caption_model.fit(
-#     train_dataset,
-#     epochs=EPOCHS,
-#     validation_data=valid_dataset,
-# )
-
-# #@title Check sample predictions
-# vocab = vectorization.get_vocabulary()
-# index_lookup = dict(zip(range(len(vocab)), vocab))
-# max_decoded_sentence_length = SEQ_LENGTH - 1
-# valid_images = list(valid_data.keys())
 
