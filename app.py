@@ -50,10 +50,12 @@ def main():
                   'Text description embeddings are calculated using :red[**BERT-based Sentence-transformers model**]: It maps sentences & paragraphs to a 768 dimensional dense vector space']
 
 #########################################################################################
-################ Sector 1: Find Similar Items #########################################################################
+################ Sector 1: Find Similar Items ###########################################
+#########################################################################################
+
     if page_selection == page_options[0]:
         best_n = 6
-        imgURL = st.sidebar.text_input('Image path', 'https://media.githubusercontent.com/media/congltk1234/ICT_HM_Fashion_Recommendation/streamlit_deploy/input.jpg')
+        imgURL = st.sidebar.text_input('Image path', 'Insert Image url here')
         my_upload = st.sidebar.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
         try: 
             if my_upload is not None:
@@ -66,12 +68,10 @@ def main():
                 urllib.request.urlretrieve(imgURL, path)
                 image_caption = Image.open(path).resize((256, 256))
                 img = cv2.imread(path) 
-         ##### New Caption ###
             check = np.array(image_caption)
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
-            # caption = generate_caption(image_caption,new_model)
-            # caption = st.sidebar.text_input(':memo: :red[**Generate Description:**]', caption)
+
             st.sidebar.image(image_caption)
             distances, img_recommend = compute_distances_fromPath(img, image_model, image_embeddings)
 
@@ -92,11 +92,12 @@ def main():
                                 price =items.iloc[idx].price*1000 
                                 st.code(f'''{items.iloc[idx].product_type_name}\n💲{price:.3g}''')
                                 st.caption(f':memo: :red[Description:] \n {items.iloc[idx].detail_desc}')
-
         except:
             pass
 #########################################################################################
+################ Sector 2: Recommend based-on History purchased #########################
 #########################################################################################
+
     if page_selection == page_options[1]:
         customers = customers_rcmnds.customer_id.unique()   
         get_item = st.sidebar.button('Get Random Customer')
@@ -121,29 +122,12 @@ def main():
                 with st.sidebar.container():
                     cols = st.columns(3)
                     for item, col in zip(split, cols):
-                        image = items[items['article_id']==item]['image'].values[0]
-                        image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
-                        image = Image.open(io.BytesIO(requests.get(image).content))
-                        image = image.resize((100, 150))
-                        with col:
-                            st.image(image, use_column_width=True)
-                            name = items[items['article_id']==item]['prod_name'].values[0]
-                            item_url = url(item)
-                            st.write(f"**[{name}]({item_url})**")
-                            group = items[items['article_id']==item]['product_type_name'].values[0]
-                            price = items[items['article_id']==item]['price'].values[0]*1000
-                            st.code(f'''{group}\n💲{price:.3g}''')
-
-
-            with st.container():     
-                    container = st.expander(':red[**Association Rules: Apriori Algorithm**]', expanded =True)
-                    with container:
-                        cols = st.columns(6)
-                        for item, col in zip(apriori[:6], cols):
+                        try:
+                            image = items[items['article_id']==item]['image'].values[0]
+                            image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
+                            image = Image.open(io.BytesIO(requests.get(image).content))
+                            image = image.resize((100, 150))
                             with col:
-                                image = items[items['article_id']==item]['image'].values[0]
-                                image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
-                                image = Image.open(io.BytesIO(requests.get(image).content))
                                 st.image(image, use_column_width=True)
                                 name = items[items['article_id']==item]['prod_name'].values[0]
                                 item_url = url(item)
@@ -151,25 +135,37 @@ def main():
                                 group = items[items['article_id']==item]['product_type_name'].values[0]
                                 price = items[items['article_id']==item]['price'].values[0]*1000
                                 st.code(f'''{group}\n💲{price:.3g}''')
-            with st.container():     
-                    container = st.expander(':red[**Collaborative Filtering: User-user**]', expanded =True)
+                        except:
+                            pass
+
+            recommends = {'list_items' : [apriori,uucf],
+                          'methods' : [':red[**Association Rules: Apriori Algorithm**]', ':red[**Collaborative Filtering: User-user**]']}
+
+            for method, list_item in zip(recommends['methods'], recommends['list_items']):
+                with st.container(): 
+                    container = st.expander(method, expanded =True)
                     with container:
                         cols = st.columns(6)
-                        for item, col in zip(uucf[:6], cols):
+                        for item, col in zip(list_item[:6], cols):
                             with col:
-                                image = items[items['article_id']==item]['image'].values[0]
-                                image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
-                                image = Image.open(io.BytesIO(requests.get(image).content))
-                                st.image(image, use_column_width=True)
-                                name = items[items['article_id']==item]['prod_name'].values[0]
-                                item_url = url(item)
-                                st.write(f"**[{name}]({item_url})**")
-                                group = items[items['article_id']==item]['product_type_name'].values[0]
-                                price = items[items['article_id']==item]['price'].values[0]*1000
-                                st.code(f'''{group}\n💲{price:.3g}''')
+                                try:
+                                    image = items[items['article_id']==item]['image'].values[0]
+                                    image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+image
+                                    image = Image.open(io.BytesIO(requests.get(image).content))
+                                    st.image(image, use_column_width=True)
+                                    name = items[items['article_id']==item]['prod_name'].values[0]
+                                    item_url = url(item)
+                                    st.write(f"**[{name}]({item_url})**")
+                                    group = items[items['article_id']==item]['product_type_name'].values[0]
+                                    price = items[items['article_id']==item]['price'].values[0]*1000
+                                    st.code(f'''{group}\n💲{price:.3g}''')
+                                except:
+                                    pass
 
-#########################################################################################  
 #########################################################################################
+######################## Sector 3: Project Informations #################################
+#########################################################################################
+
     about_us = { 'names': ['Công Sử', 'Ngân Hồ', 'Trâm Mai', 'Uyên Trần'],
                 'roles' : ['AI/ML💻\nSimilarity Algorithms', 'DA📊\nCustomers Analysis', 'DA📊\nItems Analysis', 'AI/ML💻\nRecommendation Algorithms'],
                 'imgs'  : ['images_256_256/1.png', 'images_256_256/3.png', 'images_256_256/4.png', 'images_256_256/2.png']}
