@@ -33,7 +33,7 @@ def load_EfficientNetB0_model():
     return image_model
 image_model = load_EfficientNetB0_model()
 
-@st.cache_data(max_entries=1)
+@st.cache_data(max_entries=10)
 def get_best_similiarity(embedded_vectors,new_vector, best_n = 6) :
     embedding_cosine = cosine_similarity(embedded_vectors , new_vector).squeeze()
     idx = embedding_cosine.argsort()[-best_n:][::-1]
@@ -42,7 +42,7 @@ def get_best_similiarity(embedded_vectors,new_vector, best_n = 6) :
     return embedding_cosine,idx
 
 
-@st.cache_data(max_entries=1)
+@st.cache_data(max_entries=10)
 def compute_distances_fromPath(img, model, image_embeddings):
     """
     Returns distances indices of most similar products based on embeddings extracted from model
