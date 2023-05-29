@@ -3,14 +3,16 @@ st.set_page_config(layout="wide", initial_sidebar_state='expanded')
 import io
 import requests
 import urllib.request
-import numpy as np
+
 import pandas as pd
+import numpy as np
 
 import cv2
 from PIL import Image
 import tensorflow as tf
 from tensorflow.keras.applications import EfficientNetB0
 from sklearn.metrics.pairwise import cosine_similarity
+
 
 @st.cache_data
 def load_csv():
@@ -43,15 +45,17 @@ def get_best_similiarity(embedded_vectors,new_vector, best_n = 6) :
 
 
 def compute_distances_fromPath(img, model, image_embeddings):
-    """
-    Returns distances indices of most similar products based on embeddings extracted from model
-    """
     X = np.zeros((1, 256, 256, 3), dtype='float32')
     img = cv2.resize(img, (256, 256))
     X[0,] = img
     inf_embeddings = model.predict(X, verbose=1)
     distances, indices = get_best_similiarity(image_embeddings,inf_embeddings) 
     return distances, indices
+
+
+def url(item_id):
+    url = 'https://www2.hm.com/en_us/productpage.0'+ str(item_id) +'.html'
+    return url
 
 
 def main():
@@ -70,7 +74,7 @@ def main():
 
     if page_selection == page_options[0]:
         best_n = 6
-        imgURL = st.sidebar.text_input('Image path', 'Insert Image url here')
+        imgURL = st.sidebar.text_input('Image path', 'Example: https://abc.image.jpg')
         my_upload = st.sidebar.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
         try: 
             if my_upload is not None:
@@ -86,14 +90,12 @@ def main():
             check = np.array(image_caption)
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
-
             st.sidebar.image(image_caption)
             distances, img_recommend = compute_distances_fromPath(img, image_model, image_embeddings)
 
             with st.container():     
                     container = st.expander(':tshirt: :red[**Similar items based on Image embeddings**]', expanded =True)
                     with container:
-                        # st.write('###### Similarity Score')
                         st.caption(model_descs[0])
                         cols = st.columns(6)
                         for idx, col, score in zip(img_recommend, cols, distances):
@@ -109,6 +111,7 @@ def main():
                                 st.caption(f':memo: :red[Description:] \n {items.iloc[idx].detail_desc}')
         except:
             pass
+        
 #########################################################################################
 ################ Sector 2: Recommend based-on History purchased #########################
 #########################################################################################
