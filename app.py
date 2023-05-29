@@ -1,16 +1,16 @@
 import streamlit as st
 st.set_page_config(layout="wide", initial_sidebar_state='expanded')
-import pandas as pd
-import numpy as np
-from PIL import Image
-import urllib.request
-import cv2
-import tensorflow as tf
-from utils.image_func import *
-from tensorflow.keras.applications import EfficientNetB0
 import io
 import requests
+import urllib.request
+import numpy as np
+import pandas as pd
 
+import cv2
+from PIL import Image
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0
+from sklearn.metrics.pairwise import cosine_similarity
 
 @st.cache_data
 def load_csv():
@@ -33,10 +33,26 @@ def load_EfficientNetB0_model():
     return image_model
 image_model = load_EfficientNetB0_model()
 
+@st.cache_data(max_entries=1)
+def get_best_similiarity(embedded_vectors,new_vector, best_n = 6) :
+    embedding_cosine = cosine_similarity(embedded_vectors , new_vector).squeeze()
+    idx = embedding_cosine.argsort()[-best_n:][::-1]
+    embedding_cosine.sort()
+    embedding_cosine = embedding_cosine[-best_n:][::-1]
+    return embedding_cosine,idx
 
-def url(item_id):
-    url = 'https://www2.hm.com/en_us/productpage.0'+ str(item_id) +'.html'
-    return url
+
+@st.cache_data(max_entries=1)
+def compute_distances_fromPath(img, model, image_embeddings):
+    """
+    Returns distances indices of most similar products based on embeddings extracted from model
+    """
+    X = np.zeros((1, 256, 256, 3), dtype='float32')
+    img = cv2.resize(img, (256, 256))
+    X[0,] = img
+    inf_embeddings = model.predict(X, verbose=1)
+    distances, indices = get_best_similiarity(image_embeddings,inf_embeddings) 
+    return distances, indices
 
 
 def main():
