@@ -1,5 +1,6 @@
 import streamlit as st
-st.set_page_config(layout="wide", initial_sidebar_state='expanded')
+st.set_page_config(page_title="Fashion Recommender✨", page_icon="👚",
+                   layout="wide", initial_sidebar_state='expanded')
 import io
 import requests
 import urllib.request
@@ -67,7 +68,7 @@ def main():
     page_selection = st.sidebar.radio("Try", page_options)
     model_descs = ['Image embeddings are calculated using :red[**EfficientNetB0 from Keras**], It maps image into a 1280 dimensional dense vector space', 
                   'Text description embeddings are calculated using :red[**BERT-based Sentence-transformers model**]: It maps sentences & paragraphs to a 768 dimensional dense vector space']
-    sessions = st.session_state
+
 #########################################################################################
 ################ Sector 1: Find Similar Items ###########################################
 #########################################################################################
@@ -90,19 +91,15 @@ def main():
             check = np.array(image_caption)
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
-            st.session_state['img'] = image_caption
-            st.sidebar.image(sessions('img',image_caption))
-#             st.sidebar.image(image_caption)
+            st.sidebar.image(image_caption)
         
             distances, img_recommend = compute_distances_fromPath(img, image_model, image_embeddings)
-            st.session_state['distances'] = distances
-            st.session_state['img_recommend'] = img_recommend
             with st.container():     
                     container = st.expander(':tshirt: :red[**Similar items based on Image embeddings**]', expanded =True)
                     with container:
                         st.caption(model_descs[0])
                         cols = st.columns(6)
-                        for idx, col, score in zip(sessions.get('img_recommend',img_recommend), cols, sessions.get('distances',distances)):
+                        for idx, col, score in zip(img_recommend, cols, distances):
                             with col:
                                 st.caption('{:.2f}'.format(score))
                                 image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
