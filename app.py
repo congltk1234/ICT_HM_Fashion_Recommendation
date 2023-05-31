@@ -1,5 +1,6 @@
 import streamlit as st
-st.set_page_config(layout="wide", initial_sidebar_state='expanded')
+st.set_page_config(page_title="Fashion Recommender✨", page_icon="👚",
+                   layout="wide", initial_sidebar_state='expanded')
 import io
 import requests
 import json
@@ -130,11 +131,32 @@ def generate_caption(img, model):
     decoded_caption = decoded_caption.replace(" <end>", "").strip()
     return decoded_caption
 
-
 def url(item_id):
     url = 'https://www2.hm.com/en_us/productpage.0'+ str(item_id) +'.html'
     return url
 
+model_descs = ['Image embeddings are calculated using :red[**EfficientNetB0 from Keras**], It maps image into a 1280 dimensional dense vector space', 
+                'Text description embeddings are calculated using :red[**BERT-based Sentence-transformers model**]: It maps sentences & paragraphs to a 768 dimensional dense vector space']
+
+def show_result(method, list_item, scores, describe, items):
+    with st.container():     
+            container = st.expander(method, expanded =True)
+            with container:
+                cols = st.columns(6)
+                cols[0].write('###### Similarity Score')
+                cols[0].caption(describe)
+                for idx, col, score in zip(list_item[:5], cols[1:], scores[:5]):
+                    with col:
+                        st.caption('{:.2f}'.format(score))
+                        image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
+                        image = Image.open(io.BytesIO(requests.get(image).content))
+                        st.image(image, use_column_width=True)
+                        item_url = url(items.iloc[idx].article_id)
+                        st.write(f"**[{items.iloc[idx].prod_name}]({item_url})**")
+                        price =items.iloc[idx].price*1000 
+                        st.code(f'''{items.iloc[idx].product_type_name}\n💲{price:.3g}''')
+                        if describe == model_descs[1]:
+                            st.caption(f':memo: :red[Description:] \n {items.iloc[idx].detail_desc}')
 
 def main():
 ######################### SideBar  ###########################################
@@ -144,67 +166,42 @@ def main():
     
     page_selection = st.sidebar.radio("Try", page_options)
     
-    model_descs = ['Image embeddings are calculated using :red[**EfficientNetB0 from Keras**], It maps image into a 1280 dimensional dense vector space', 
-                  'Text description embeddings are calculated using :red[**BERT-based Sentence-transformers model**]: It maps sentences & paragraphs to a 768 dimensional dense vector space']
-
 #########################################################################################
 ################ Sector 1: Find Similar Items ###########################################
 #########################################################################################
   
     if page_selection == page_options[0]:
         best_n = 6
-        imgURL = st.sidebar.text_input('Image path', 'https://media.githubusercontent.com/media/congltk1234/ICT_HM_Fashion_Recommendation/streamlit_deploy/input.jpg')
         my_upload = st.sidebar.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
-        try: 
-            if my_upload is not None:
-                image_caption = Image.open(my_upload).resize((256, 256))
-                imgURL = ''
-                global img
-                img = cv2.cvtColor(np.array(image_caption), cv2.COLOR_RGB2BGR)
-            elif imgURL is not None:
-                path = "input.jpg" 
-                urllib.request.urlretrieve(imgURL, path)
-                image_caption = Image.open(path).resize((256, 256))
-                img = cv2.imread(path) 
-         ##### New Caption ###
+        if my_upload is not None:
+            image_caption = Image.open(my_upload).resize((256, 256))
+            global img
+            img = cv2.cvtColor(np.array(image_caption), cv2.COLOR_RGB2BGR)   
             check = np.array(image_caption)
             if check.shape[2] > 3:
                 image_caption = check[...,:3]
-
+            ##### New Caption ###
+            global caption
             caption = generate_caption(image_caption,new_model)
-            caption = st.sidebar.text_input(':memo: :red[**Generate Description:**]', caption)
+            caption = st.sidebar.text_area(':memo: :red[**Generate Description:**]', caption)
             st.sidebar.image(image_caption)
             
             caption = sbert_model.encode(caption)
             caption = np.expand_dims(caption, axis=0)
 
             distances, img_recommend = compute_distances_fromPath(img, image_model, image_embeddings)
+            show_result(':tshirt: :red[**Similar items based on Image embeddings**]',
+                         img_recommend, distances, model_descs[0], items)
             text_similarity, describe_recommend = get_best_similiarity(sentence_embeddings , caption , best_n)  
-                    
-            recommends = {'methods' : [':tshirt: :red[**Similar items based on Image embeddings**]', ':left_speech_bubble: :red[**Similar items based on Text embeddings**]'],
-                          'list_items' : [img_recommend,describe_recommend],
-                          'scores': [distances, text_similarity],
-                          'describes': model_descs,}              
-            
-            for method, list_item, scores, describe in zip(recommends['methods'], recommends['list_items'], recommends['scores'], recommends['describes']):
-                with st.container():     
-                        container = st.expander(method, expanded =True)
-                        with container:
-                            cols = st.columns(6)
-                            cols[0].write('###### Similarity Score')
-                            cols[0].caption(describe)
-                            for idx, col, score in zip(list_item[:5], cols[1:], scores[:5]):
-                                with col:
-                                    st.caption('{:.2f}'.format(score))
-                                    image = 'https://media.githubusercontent.com/media/congltk1234/HM_images/main/'+items.iloc[idx].image
-                                    image = Image.open(io.BytesIO(requests.get(image).content))
-                                    st.image(image, use_column_width=True)
-                                    item_url = url(items.iloc[idx].article_id)
-                                    st.write(f"**[{items.iloc[idx].prod_name}]({item_url})**")
-                                    price =items.iloc[idx].price*1000 
-                                    st.code(f'''{items.iloc[idx].product_type_name}\n💲{price:.3g}''')
-        except:
-            pass
+            show_result(':left_speech_bubble: :red[**Similar items based on Text embeddings**]',
+                         describe_recommend, text_similarity, model_descs[1], items)
+        else:
+            query = st.sidebar.text_area(':memo: :red[**Search Items:**]')      
+            query = sbert_model.encode(query)
+            query = np.expand_dims(query, axis=0)
+            text_similarity, describe_recommend = get_best_similiarity(sentence_embeddings , query , best_n)  
+            show_result(':left_speech_bubble: :red[**Similar items based on Text embeddings**]',
+                         describe_recommend, text_similarity, model_descs[1], items)
 
 #########################################################################################
 ################ Sector 2: Recommend based-on History purchased #########################
@@ -307,7 +304,7 @@ def main():
                     st.subheader(name)
                     image = Image.open(image).resize((256, 256))
                     st.image(image, use_column_width=True)
-                    st.code('HueUni\nRole :' + role)
+                    st.code('HueUni\nRole:' + role)
 
         with st.expander('ℹ️ **DATASOURCE**',expanded =True):
                 st.code('''                     
